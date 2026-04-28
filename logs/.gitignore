@@ -1,0 +1,6 @@
+# 忽略 data 目录下的所有运行时数据文件
+*
+*.pid
+*.log
+# 但是不要忽略本 .gitignore 文件自己 (从而迫使 Git 保留 data 目录)
+!.gitignore

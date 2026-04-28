@@ -1,0 +1,34 @@
+[MemProbe] 企业级内置遥测探针已永久激活...(物理查岗: sudo kill -SIGUSR1 58947)
+========================================
+ 🛡️ InazumaKV Configuration Loaded
+========================================
+ Network:
+   Bind IP:   0.0.0.0
+   Port:      6379
+ System:
+   Role:      MASTER
+   Log Level: WARN
+   Persist:   AOF
+ AF_XDP (Kernel Bypass):
+   Interface: ""
+   Target Slave IP:  192.168.124.14
+   Target Slave MAC: 00:0c:29:2c:bc:bf
+ Disaster Recovery:
+   Auto-BGSAVE: Disabled
+   AOF Rewrite: 0%
+========================================
+========================================
+ [Network] Initializing Environment...
+========================================
+[0/4] Detaching interface from NetworkManager...
+[1/4] Resetting interface and hardware queues...
+[2/4] Configuring MASTER IP and Static ARP...
+[3/4] Rebuilding RDMA Virtual Link (SoftRoCE)...
+[4/4] Waiting for Kernel Network Stack to stabilize...
+========================================
+[Reactor] Binding to all interfaces (0.0.0.0)
+Reactor (Epoll) Server Started on Port: 6379 (Dynamic Buffer: 1MB)
+
+[Signal] Caught signal 15 (SIGINT/SIGTERM), shutting down safely...
+
+[Teardown] Cleaning up Epoll and Network Buffers...

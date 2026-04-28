@@ -1,0 +1,18 @@
+# 忽略编译产物和缓存
+*/build/
+*/bin/
+*/obj/       
+obj/       
+CMakeCache.txt
+CMakeFiles/
+
+# 忽略日志和本地运行数据
+logs/
+inazuma-kv/data/
+
+# 忽略 Python 缓存
+__pycache__/
+.pytest_cache/
+
+# 忽略 Git 记录
+.git/
