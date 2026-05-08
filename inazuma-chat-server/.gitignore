@@ -1,0 +1,14 @@
+# 编译产物
+build/
+bin/
+*.o
+*.a
+*.so
+
+# IDE 配置文件
+.vscode/
+.idea/
+
+# 环境变量与机密配置 (极其重要！绝不能把数据库密码传上云端)
+.env
+conf/db_password.txt

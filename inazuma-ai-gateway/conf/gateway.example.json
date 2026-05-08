@@ -1,0 +1,11 @@
+{
+    "api_keys": {
+        "qwen": "sk-your-qwen-key-here",
+        "openai": "sk-your-openai-key-here",
+        "deepseek": "sk-your-deepseek-key-here"
+    },
+    "routing": {
+        "default_model": "qwen-turbo",
+        "retry_attempts": 3
+    }
+}

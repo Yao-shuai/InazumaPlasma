@@ -1,0 +1,118 @@
+version: '3.8'
+
+services:
+  # ==========================================
+  # 🗄️ 1. MySQL 数据库服务 (业务数据持久化)
+  # ==========================================
+  mysql:
+    image: mysql:8.0
+    container_name: inazuma-mysql
+    restart: always
+    environment:
+      MYSQL_ROOT_PASSWORD: ${DB_ROOT_PASSWORD}
+      MYSQL_DATABASE: inazuma_chat
+      MYSQL_USER: ${DB_USER}
+      MYSQL_PASSWORD: ${DB_PASSWORD}
+    ports:
+      - "3306:3306"
+    volumes:
+      - ./inazuma-db/init:/docker-entrypoint-initdb.d
+      - mysql_data:/var/lib/mysql
+
+  # ==========================================
+  # 🧠 2. AI 算法中枢 (计费 + 向量 + Rerank + 知识库)
+  # ==========================================
+  inazuma-tokenizer:
+    build: .
+    image: inazuma-core:latest
+    container_name: inazuma-tokenizer
+    network_mode: "host" 
+    environment:
+      - HF_ENDPOINT=https://hf-mirror.com # 确保国内下载不卡脖子
+    # 💥 核心补丁：启动前自动通过 pip 补齐 jieba 知识库算法依赖
+    command: ["bash", "-c", "pip install jieba && cd /app/tokenizer && uvicorn tokenizer:app --host 0.0.0.0 --port 8001"]
+    healthcheck:
+      test: ["CMD-SHELL", "python3 -c 'import urllib.request; urllib.request.urlopen(\"http://127.0.0.1:8001/health\")' || exit 1"]
+      interval: 10s
+      timeout: 5s
+      retries: 3
+      start_period: 600s # 给足 10 分钟的时间，允许断网自愈和依赖下载
+    volumes:
+      - huggingface_cache:/root/.cache/huggingface # 极速秒开的秘密，模型死死焊在硬盘里
+
+  # ==========================================
+  # 🚀 3. C++ 极速异步网关 (io_uring + 物理哨兵)
+  # ==========================================
+  inazuma-gateway:
+    image: inazuma-core:latest 
+    container_name: inazuma-gateway
+    environment:
+      QWEN_API_KEY: ${QWEN_API_KEY}
+      DEEPSEEK_API_KEY: ${DEEPSEEK_API_KEY}
+      OPENAI_API_KEY: ${OPENAI_API_KEY}
+      DEFAULT_MODEL: qwen-turbo
+    privileged: true # 💥 必须开启：AF_XDP 旁路网卡挂载需要 Linux 特权模式
+    network_mode: "host"
+    command: ["bash", "-c", "cd /app/inazuma-ai-gateway/bin && stdbuf -oL ./ai_gateway"]
+    volumes:
+      - ./inazuma-ai-gateway/conf:/app/inazuma-ai-gateway/conf
+    depends_on:
+      inazuma-tokenizer:
+        condition: service_healthy # 必须等 AI 中枢准备好，网关才放行流量
+
+  # ==========================================
+  # 💰 4. 业务与精准计费层
+  # ==========================================
+  inazuma-chat:
+    image: inazuma-core:latest
+    container_name: inazuma-chat
+    environment:
+      DB_HOST: 127.0.0.1  
+      DB_USER: ${DB_USER}
+      DB_PASSWORD: ${DB_PASSWORD}
+      JWT_SECRET: ${JWT_SECRET}
+    network_mode: "host" 
+    command: ["bash", "-c", "cd /app/inazuma-chat-server/bin && stdbuf -oL ./chat_server"]
+    depends_on:
+      - inazuma-gateway
+      - mysql
+
+  # ==========================================
+  # 📈 5. 科技紫全链路监控大屏
+  # ==========================================
+  inazuma-dashboard:
+    image: inazuma-core:latest
+    container_name: inazuma-dashboard
+    environment:
+      DB_HOST: 127.0.0.1
+      DB_USER: ${DB_USER}
+      DB_PASSWORD: ${DB_PASSWORD}
+    network_mode: "host"  
+    command: ["bash", "-c", "cd /app/inazuma-dashboard && python3 -m streamlit run dashboard.py --server.port=8501 --server.address=0.0.0.0"]
+    volumes:
+      - ./inazuma-dashboard:/app/inazuma-dashboard
+    depends_on:
+      - inazuma-gateway
+      - mysql
+
+  # ==========================================
+  # 🛡️ 6. 统一安全反向代理层 (Nginx)
+  # ==========================================
+  inazuma-nginx:
+    image: nginx:latest
+    container_name: inazuma-nginx
+    restart: always
+    network_mode: "host"
+    volumes:
+      - ./inazuma-nginx/nginx.conf:/etc/nginx/nginx.conf:ro
+      - ./inazuma-nginx/.htpasswd:/etc/nginx/.htpasswd:ro
+    depends_on:
+      - inazuma-chat
+      - inazuma-dashboard
+
+# ==========================================
+# 💾 全局持久化数据卷声明
+# ==========================================
+volumes:
+  mysql_data:
+  huggingface_cache:
